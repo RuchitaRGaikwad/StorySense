@@ -1,0 +1,95 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: Setup venv & install deps",
+      "type": "shell",
+      "command": "test -d venv && echo 'venv exists' || python3 -m venv venv; source venv/bin/activate && pip install -r requirements.txt",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "group": "build",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "backend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: Generate embeddings",
+      "type": "shell",
+      "command": "source venv/bin/activate && python embed.py",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "dependsOn": "Backend: Setup venv & install deps",
+      "group": "build",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "backend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: Start API server",
+      "type": "shell",
+      "command": "source venv/bin/activate && uvicorn main:app --reload --port 8000",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "dependsOn": "Backend: Generate embeddings",
+      "isBackground": true,
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "backend"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Uvicorn running.*$",
+          "endsPattern": "^.*Application startup complete.*$"
+        }
+      }
+    },
+    {
+      "label": "Frontend: Start dev server",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "isBackground": true,
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "frontend"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*VITE.*$",
+          "endsPattern": "^.*Local:.*$"
+        }
+      }
+    },
+    {
+      "label": "StorySense: Start Full App",
+      "dependsOn": [
+        "Backend: Start API server",
+        "Frontend: Start dev server"
+      ],
+      "dependsOrder": "parallel",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "default"
+      }
+    }
+  ]
+}
