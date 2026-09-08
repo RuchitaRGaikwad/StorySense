@@ -37,6 +37,21 @@ class RecommendationEngine:
             )
 
         self.df = pd.read_csv(UNIFIED_CSV)
+        if "poster_url" not in self.df.columns:
+            self.df["poster_url"] = ""
+
+        # Merge cached posters if available
+        cache_file = os.path.join(DATA_DIR, "poster_cache.json")
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, "r") as f:
+                    cache = json.load(f)
+                for cid, url in cache.items():
+                    if url:
+                        self.df.loc[self.df["content_id"] == cid, "poster_url"] = url
+            except Exception as e:
+                print(f"Warning: could not load poster_cache.json: {e}")
+
         self.embeddings = np.load(EMBEDDINGS_FILE)
 
         with open(IDS_FILE, "r") as f:
@@ -52,12 +67,29 @@ class RecommendationEngine:
             f"embeddings shape {self.embeddings.shape}"
         )
 
+    def _clean_dict(self, d: dict) -> dict:
+        """Replace NaN values with valid JSON types."""
+        clean = {}
+        for k, v in d.items():
+            if pd.isna(v):
+                if k in ("poster_url", "genre", "description", "title", "media_type", "author"):
+                    clean[k] = ""
+                elif k == "year":
+                    clean[k] = 0
+                else:
+                    clean[k] = None
+            else:
+                clean[k] = v
+        return clean
+
     def get_item(self, content_id: str) -> Optional[dict]:
         """Get a single item by content_id."""
         if content_id not in self.id_to_idx:
             return None
         row = self.df[self.df["content_id"] == content_id].iloc[0]
-        return row.to_dict()
+        item = self._clean_dict(row.to_dict())
+        item.setdefault("poster_url", "")
+        return item
 
     def search(self, query: str, media_type: Optional[str] = None, limit: int = 20) -> list[dict]:
         """Search items by title or description substring match."""
@@ -73,7 +105,10 @@ class RecommendationEngine:
             mask = mask & (self.df["media_type"] == media_type.lower())
 
         results = self.df[mask].head(limit)
-        return results.to_dict("records")
+        records = [self._clean_dict(r) for r in results.to_dict("records")]
+        for r in records:
+            r.setdefault("poster_url", "")
+        return records
 
     def _get_top_keywords(self, text: str, top_n: int = 5) -> list[str]:
         """Extract top keywords from text by frequency."""
@@ -192,20 +227,22 @@ class RecommendationEngine:
             if score < 0:
                 break
             target_row = self.df.iloc[rec_idx]
+            clean_target = self._clean_dict(target_row.to_dict())
             rec = {
-                "content_id": target_row["content_id"],
-                "title": target_row["title"],
-                "media_type": target_row["media_type"],
-                "genre": target_row["genre"],
+                "content_id": clean_target["content_id"],
+                "title": clean_target["title"],
+                "media_type": clean_target["media_type"],
+                "genre": clean_target["genre"],
+                "poster_url": clean_target.get("poster_url", ""),
                 "similarity_score": round(score, 4),
                 "similarity_pct": round(score * 100, 1),
                 "why": self._generate_why(
                     source_row.to_dict(), target_row.to_dict(), score
                 ),
                 "description": (
-                    str(target_row["description"])[:200] + "..."
-                    if len(str(target_row["description"])) > 200
-                    else str(target_row["description"])
+                    str(clean_target["description"])[:200] + "..."
+                    if len(str(clean_target["description"])) > 200
+                    else str(clean_target["description"])
                 ),
             }
             recommendations.append(rec)
@@ -219,6 +256,7 @@ class RecommendationEngine:
                 "media_type": source_row["media_type"],
                 "description": source_row["description"],
                 "genre": source_row["genre"],
+                "poster_url": str(source_row.get("poster_url", "")) if pd.notna(source_row.get("poster_url")) else "",
                 "year": int(source_row["year"]) if pd.notna(source_row["year"]) else None,
                 "rating": float(source_row["avg_rating"]) if pd.notna(source_row["avg_rating"]) else None,
             },
@@ -290,7 +328,7 @@ class RecommendationEngine:
                 "max_query_time_ms": round(float(np.max(response_times)), 2),
                 "total_eval_time_s": round(total_elapsed, 2),
             },
-            "disclaimer": "Prototype-scale metrics computed on sample dataset (~70 items). Not representative of production-scale accuracy.",
+            "disclaimer": "Prototype-scale metrics computed on sample of ~4000 real-world items (movies + books).",
         }
 
 

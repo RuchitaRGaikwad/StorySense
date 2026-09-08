@@ -2,8 +2,14 @@
 venv/
 node_modules/
 .env
-.env.*
+.env.local
 __pycache__/
 .DS_Store
 dist/
 .freebuff/
+
+# Generated data (can be regenerated)
+backend/data/poster_cache.json
+backend/data/unified_dataset.csv
+backend/data/embeddings.npy
+backend/data/content_ids.json
