@@ -13,3 +13,6 @@ backend/data/poster_cache.json
 backend/data/unified_dataset.csv
 backend/data/embeddings.npy
 backend/data/content_ids.json
+backend/data/*.db
+*.db
+

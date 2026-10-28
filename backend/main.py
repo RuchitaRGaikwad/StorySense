@@ -15,6 +15,8 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from recommend import get_engine
+import auth
+
 
 app = FastAPI(
     title="StorySense API",
@@ -32,9 +34,12 @@ app.add_middleware(
 )
 
 
+app.include_router(auth.router)
+
 @app.on_event("startup")
 async def startup():
     """Load the recommendation engine on startup."""
+    auth.init_db()
     get_engine()
 
 

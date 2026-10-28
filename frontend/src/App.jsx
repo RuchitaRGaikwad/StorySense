@@ -3,6 +3,11 @@ import Home from './pages/Home'
 import ItemDetail from './pages/ItemDetail'
 import HowItWorks from './pages/HowItWorks'
 import Evaluation from './pages/Evaluation'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import ForgotPassword from './pages/ForgotPassword'
+import ProtectedRoute from './components/ProtectedRoute'
+import { useAuth } from './context/AuthContext'
 import './App.css'
 
 const navLinks = [
@@ -13,6 +18,7 @@ const navLinks = [
 
 function App() {
   const location = useLocation()
+  const { user, logout } = useAuth()
 
   return (
     <div className="min-h-screen bg-[#F7F3EA] text-[#4A4A43] flex flex-col font-sans">
@@ -48,6 +54,14 @@ function App() {
                   </Link>
                 )
               })}
+              {user && (
+                <button
+                  onClick={logout}
+                  className="ml-2 px-4 py-2 rounded-md text-sm font-medium transition-all text-[#D97745] hover:text-[#F7F3EA] hover:bg-[#294D42]/60"
+                >
+                  Logout
+                </button>
+              )}
             </nav>
           </div>
         </div>
@@ -56,10 +70,13 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-grow w-full">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/item/:contentId" element={<ItemDetail />} />
-          <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/evaluation" element={<Evaluation />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/item/:contentId" element={<ProtectedRoute><ItemDetail /></ProtectedRoute>} />
+          <Route path="/how-it-works" element={<ProtectedRoute><HowItWorks /></ProtectedRoute>} />
+          <Route path="/evaluation" element={<ProtectedRoute><Evaluation /></ProtectedRoute>} />
         </Routes>
       </main>
 
